@@ -30,7 +30,7 @@ public class AdminApi {
 
         // 获取所有的主题
 //        topicList(adminClient);
-//        topicListAll(adminClient);
+        topicListAll(adminClient);
 
         // 获取主题的描述
 //        topicDesc(adminClient);
@@ -139,12 +139,16 @@ public class AdminApi {
      * date: 2020/8/4 16:42
      */
     public static void topicDesc(AdminClient adminClient) throws ExecutionException, InterruptedException {
-        DescribeTopicsResult describeTopicsResult = adminClient.describeTopics(Arrays.asList(TOPIC_NAME));
+        topicDesc(TOPIC_NAME);
+    }
+
+    public static void topicDesc(String topicName) throws ExecutionException, InterruptedException {
+        AdminClient adminClient = adminClient();
+        DescribeTopicsResult describeTopicsResult = adminClient.describeTopics(Arrays.asList(topicName));
         System.out.println("输出所有的主题的描述----------------------------");
         Map<String, TopicDescription> stringTopicDescriptionMap = describeTopicsResult.all().get();
         stringTopicDescriptionMap.entrySet().stream().forEach(r-> System.out.println(" key :" +r.getKey()+" , value :" + r.getValue()));
     }
-
 
 
 
@@ -156,9 +160,15 @@ public class AdminApi {
      * date: 2020/8/4 16:29
      */
     public static void delTopic(AdminClient adminClient){
-        DeleteTopicsResult topics = adminClient.deleteTopics(Arrays.asList(TOPIC_NAME));
+        delTopic(TOPIC_NAME);
+    }
+
+    public static void delTopic(String topicName){
+        AdminClient adminClient = adminClient();
+        DeleteTopicsResult topics = adminClient.deleteTopics(Arrays.asList(topicName));
         System.out.println("DeleteTopicsResult : " + topics.toString());
     }
+
 
     /**
      *  打印出显示的主题
@@ -201,7 +211,21 @@ public class AdminApi {
      * date: 2020/8/4 16:32
      */
     public static void topicAdd(AdminClient adminClient) throws ExecutionException, InterruptedException {
-        NewTopic newTopic = new NewTopic(TOPIC_NAME, 1, (short) 1);
+        topicAdd(TOPIC_NAME, 1, (short) 1);
+    }
+
+    /**
+     * 创建主题
+     * @param topicName 主题名称
+     * @param partition 分区的数量
+     * @param replicationFactor     副本数,必须不能大于broker数量，否则会导致分区数量不正确
+     * result:
+     * author: lwl
+     * date: 2020/8/6 16:19
+     */
+    public static void topicAdd(String topicName, int partition, short replicationFactor) throws ExecutionException, InterruptedException {
+        AdminClient adminClient = adminClient();
+        NewTopic newTopic = new NewTopic(topicName, partition, replicationFactor);
         CreateTopicsResult topics = adminClient.createTopics(Arrays.asList(newTopic));
         System.out.println("CreateTopicsResult : " + topics.toString());
     }
@@ -218,5 +242,19 @@ public class AdminApi {
         AdminClient admin =  AdminClient.create(properties);
         return admin;
     }
+
+    /**
+     * 增加某个主题的分区（注意分区只能增加不能减少）
+     * @param topicName  主题名称
+     * @param number  修改数量
+     */
+    public static void addPartition(String topicName,Integer number){
+        Map<String, NewPartitions> newPartitions=new HashMap<String, NewPartitions>();
+        //创建新的分区的结果
+        newPartitions.put(topicName,NewPartitions.increaseTo(number));
+        AdminClient adminClient = adminClient();
+        adminClient.createPartitions(newPartitions);
+    }
+
 
 }
