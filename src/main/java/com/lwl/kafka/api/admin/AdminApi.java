@@ -227,6 +227,7 @@ public class AdminApi {
         AdminClient adminClient = adminClient();
         NewTopic newTopic = new NewTopic(topicName, partition, replicationFactor);
         CreateTopicsResult topics = adminClient.createTopics(Arrays.asList(newTopic));
+        topics.all().get();
         System.out.println("CreateTopicsResult : " + topics.toString());
     }
 

@@ -1,6 +1,7 @@
 package com.lwl.kafka.api.producer3;
 
 
+import com.lwl.kafka.api.admin.AdminApi;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -8,6 +9,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @description： 消息的重要参数
@@ -21,7 +23,42 @@ public class ProducerApi3 {
 
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+
+        /**
+         *  replication-factor 副本数量
+         *　　    用来设置主题的副本数。每个主题可以有多个副本，副本位于集群中不同的broker上，也就是说副本的数量不能超过broker的数量，否则创建主题时会失败。
+         * java.util.concurrent.ExecutionException: org.apache.kafka.common.errors.InvalidReplicationFactorException:
+         *      Replication factor: 2 larger than available brokers: 1.
+         */
+        AdminApi.topicAdd(TOPIC_NAME, 2, (short) 2);
+
+        // 查看所有的主题
+//        AdminApi.topicListAll(AdminApi.adminClient());
+
+        /**
+         *  numPartitions 分区数
+         *
+         *  分区数只能增大，不能减小
+         *      增大时遇到的问题：
+         *      当主题中的消息包含有key时（即key不为null），根据key来计算分区的行为就会有所影响。当topic-config的分区数为1时，不管消息的key为何值，消息都会发往这一个分区中；
+         *      当分区数增加到3时，那么就会根据消息的key来计算分区号，原本发往分区0的消息现在有可能会发往分区1或者分区2中。
+         *      如此还会影响既定消息的顺序，所以在增加分区数时一定要三思而后行。
+         *      对于基于key计算的主题而言，建议在一开始就设置好分区数量，避免以后对其进行调整。
+         *
+         *      为什么不支持减少分区？
+             *      按照Kafka现有的代码逻辑而言，此功能完全可以实现，不过也会使得代码的复杂度急剧增大。
+             *      实现此功能需要考虑的因素很多，比如删除掉的分区中的消息该作何处理？如果随着分区一起消失则消息的可靠性得不到保障；
+             *      如果需要保留则又需要考虑如何保留。直接存储到现有分区的尾部，消息的时间戳就不会递增，如此对于Spark、Flink这类需要消息时间戳（事件时间）的组件将会受到影响；
+             *      如果分散插入到现有的分区中，那么在消息量很大的时候，内部的数据复制会占用很大的资源，而且在复制期间，此主题的可用性又如何得到保障？
+             *      与此同时，顺序性问题、事务性问题、以及分区和副本的状态机切换问题都是不得不面对的。
+             *      反观这个功能的收益点却是很低，如果真的需要实现此类的功能，完全可以重新创建一个分区数较小的主题，然后将现有主题中的消息按照既定的逻辑复制过去即可。
+         *
+         *   replicationFactor 分区副本
+         *     分区副本可增可减
+             *   虽然分区数不可以减少，但是分区对应的副本数是可以减少的，这个其实很好理解，你关闭一个副本时就相当于副本数减少了。
+             *   不过正规的做法是使用kafka-reassign-partition.sh脚本来实现，具体用法可以自行搜索。
+         */
 
         /**
          *
