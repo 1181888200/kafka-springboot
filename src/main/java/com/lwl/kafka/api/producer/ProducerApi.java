@@ -157,5 +157,43 @@ public class ProducerApi {
     }
 
 
+    /**
+     *  发送消息到指定主题
+     * @param topicName 主题名称
+     * @param count 消息数量
+     * result:
+     * author: lwl
+     * date: 2020/8/7 10:06
+     */
+    public static void sendMessageToTopic(String topicName, int count) throws Exception {
+        Properties props = new Properties();
+        //服务地址
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.31.28:9092");
+        //失败重试次数
+        props.put(ProducerConfig.RETRIES_CONFIG, 0);
+        //批量发送数量
+        props.put(ProducerConfig.BATCH_SIZE_CONFIG, "4096");
+        //延时时间，延时时间到达之后，批量发送数量没达到也会发送消息
+        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
+        //缓冲区的大小
+        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, "409608");
+        //序列化
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+
+        // producer对象
+        Producer<String, String> producer = new KafkaProducer<String, String>(props);
+        // 消息对象  recorder
+        for (int i=1;i<count;i++){
+            ProducerRecord<String,String> record =
+                    new ProducerRecord<String, String>(topicName,"key-"+i,"value-"+i);
+            // 发送消息
+            producer.send(record);
+        }
+        // 关闭通道
+        producer.close();
+
+    }
+
 
 }
