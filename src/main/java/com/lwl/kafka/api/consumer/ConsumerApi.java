@@ -256,6 +256,7 @@ public class ConsumerApi {
         // 持续从主题中获取消息
         while (true){
             // 指定某个分区从 偏移量多少开始消费数据
+            // offset可以通过放入redis中，然后每次消费完之后的offset+1 存入redis, 这样就保证了消息不会被重复消费
             consumer.seek(topicPartition, offset);
 
             // 通过拉的方式，获取数据，此数据是一个一批一批的，也就是一批中会有多个消息
