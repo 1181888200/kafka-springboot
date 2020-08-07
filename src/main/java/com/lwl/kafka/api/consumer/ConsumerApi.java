@@ -81,6 +81,19 @@ public class ConsumerApi {
          *  topic = consumer.topic partition = 1 offset = 14, key = key-18, value = value-18
          */
 //        consumerPartitionOne(1);
+
+        // 测试四
+        // 指定某个分区从 偏移量多少开始消费数据
+        /**
+         *  因为是while循环，所以每次都是从10 开始
+         *  topic = consumer.topic partition = 1 offset = 10, key = key-11, value = value-11
+         *  topic = consumer.topic partition = 1 offset = 11, key = key-13, value = value-13
+         *  topic = consumer.topic partition = 1 offset = 12, key = key-15, value = value-15
+         *  topic = consumer.topic partition = 1 offset = 13, key = key-16, value = value-16
+         *  topic = consumer.topic partition = 1 offset = 14, key = key-18, value = value-18
+         */
+//        consumerPartitionOneWithOffSet(1, 10);
+
     }
 
 
@@ -203,6 +216,48 @@ public class ConsumerApi {
 
         // 持续从主题中获取消息
         while (true){
+            // 通过拉的方式，获取数据，此数据是一个一批一批的，也就是一批中会有多个消息
+            ConsumerRecords<String, String> records  = consumer.poll(1000);
+            // 逐个分区进行处理，同时逐个分区提交自己的偏移量
+            for (TopicPartition partition : records.partitions()) {
+                List<ConsumerRecord<String, String>> partitionRecords = records.records(partition);
+                for (ConsumerRecord<String, String> record : partitionRecords) {
+                    System.out.printf(" topic = %s partition = %d offset = %d, key = %s, value = %s%n",
+                            record.topic(), record.partition(), record.offset(), record.key(), record.value());
+                }
+                // 获取当前处理的最后一个数据所在的偏移量
+                long lastOffset = partitionRecords.get(partitionRecords.size() - 1).offset();
+
+                // 需要手动提交一下
+                // 如果把下面这一行注释掉，那么每次执行的时候，都会从上一次已提交的offset 位置重新读取数据，也就造成了消息的重复消费
+                consumer.commitSync(Collections.singletonMap(partition, new OffsetAndMetadata(lastOffset + 1)));
+            }
+        }
+    }
+
+
+    /**
+     *  指定某个分区从 偏移量多少开始消费数据
+     * result:
+     * author: lwl
+     * date: 2020/8/7 13:31
+     */
+    public static void consumerPartitionOneWithOffSet(int partitionNum, long offset){
+        Properties props = getCommonPros();
+        // 把自动提交设置为false 即可
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        // 消费者对象
+        KafkaConsumer<String,String> consumer = new KafkaConsumer<String, String>(props);
+
+        // 消费主题中 分区为1 的消息
+        TopicPartition topicPartition = new TopicPartition(TOPIC_NAME, partitionNum);
+        consumer.assign(Arrays.asList(topicPartition));
+
+        // 持续从主题中获取消息
+        while (true){
+            // 指定某个分区从 偏移量多少开始消费数据
+            consumer.seek(topicPartition, offset);
+
             // 通过拉的方式，获取数据，此数据是一个一批一批的，也就是一批中会有多个消息
             ConsumerRecords<String, String> records  = consumer.poll(1000);
             // 逐个分区进行处理，同时逐个分区提交自己的偏移量
